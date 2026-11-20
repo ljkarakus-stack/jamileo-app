@@ -83,7 +83,10 @@ function renderJournal() {
   if (cycleOn()) {
     const ph = cyclePhase(currentDay);
     cycle = `<div class="j-cycle">
-      <button type="button" class="chip ${j.period ? "active" : ""}" data-j-period>🩸 Periode heute</button>
+      <div class="j-cycle-btns">
+        <button type="button" class="chip ${j.period ? "active" : ""}" data-j-period>🩸 Periode ${currentDay === todayKey() ? "heute" : "an diesem Tag"}</button>
+        <button type="button" class="chip" data-cal-open>📅 Zykluskalender</button>
+      </div>
       <span class="muted">${ph ? `Zyklustag ${ph.day} · ${ph.emoji} ${ph.name} <small>(geschätzt)</small>` : "Trag deine Periode ein, dann schätzt die App deine Zyklusphase."}</span>
     </div>`;
   }
@@ -110,3 +113,100 @@ document.addEventListener("click", e => {
   }
   renderToday();
 });
+
+// ---------- Cycle calendar (month view like a period app) ----------
+
+let calEditing = false;
+
+// What to show on each day: logged period, predicted period, fertile days, ovulation and cycle day
+function cycleMarks(info = cycleInfo()) {
+  const marks = {};
+  const j = state.journal || {};
+  for (const k of Object.keys(j)) if (j[k].period) marks[k] = { period: true };
+  if (!info.starts.length) return { marks, next: null };
+  const today = todayKey();
+  // Logged starts, then predicted ones for the next few months
+  const starts = info.starts.map(k => ({ k, predicted: false }));
+  let next = shiftKey(info.starts.at(-1), info.length);
+  if (next <= today) next = shiftKey(today, 1); // period is late: expect it from tomorrow
+  const firstPredicted = next;
+  for (let i = 0; i < 4; i++, next = shiftKey(next, info.length)) starts.push({ k: next, predicted: true });
+  starts.forEach((c, i) => {
+    const end = starts[i + 1]?.k || shiftKey(c.k, info.length);
+    const len = Math.round((keyToDate(end) - keyToDate(c.k)) / 86400000);
+    if (len < 15 || len > 60) return; // a gap in the log, not a real cycle
+    const ov = shiftKey(end, -14);
+    for (let d = 0; d < len; d++) {
+      const k = shiftKey(c.k, d);
+      const m = marks[k] = marks[k] || {};
+      m.cd = d + 1;
+      if (c.predicted && d < info.periodLength && !m.period) m.pred = true;
+      if (k === ov) m.ov = true;
+      else if (k >= shiftKey(ov, -5) && k <= shiftKey(ov, 1) && !m.period) m.fertile = true;
+    }
+  });
+  return { marks, next: firstPredicted };
+}
+
+function openCycleCal() {
+  calEditing = false;
+  $("#cycle-sheet").hidden = false;
+  renderCycleCal();
+  // Start at the current month
+  const box = $("#cal-months"), now = box.querySelector(".cal-month.now");
+  if (now) box.scrollTop = now.offsetTop - box.offsetTop;
+}
+
+function closeCycleCal() {
+  $("#cycle-sheet").hidden = true;
+  renderToday();
+}
+
+function renderCycleCal() {
+  const info = cycleInfo();
+  const { marks, next } = cycleMarks(info);
+  const today = todayKey();
+  const ph = cyclePhase(today, info);
+  const daysTo = next ? Math.round((keyToDate(next) - keyToDate(today)) / 86400000) : null;
+  $("#cal-summary").innerHTML = info.starts.length
+    ? `<b>${ph ? `Zyklustag ${ph.day} · ${ph.name}` : "Kein aktueller Zyklus"}</b>
+       <span>Nächste Periode ca. ${keyToDate(next).toLocaleDateString("de-DE", { day: "numeric", month: "long" })} (in ${daysTo} ${daysTo === 1 ? "Tag" : "Tagen"})</span>
+       <span class="muted small">Ø Zyklus ${info.length} Tage · Ø Periode ${info.periodLength} Tage${info.measured ? "" : " (Standardwerte, bis 2 Perioden eingetragen sind)"}</span>`
+    : `<b>Noch keine Periode eingetragen</b><span class="muted">Tippe unten auf „Periode bearbeiten“ und markiere die Tage deiner letzten Periode.</span>`;
+
+  const now = keyToDate(today);
+  const months = [];
+  for (let m = -3; m <= 3; m++) months.push(new Date(now.getFullYear(), now.getMonth() + m, 1));
+  $("#cal-months").innerHTML = months.map(first => {
+    const y = first.getFullYear(), mo = first.getMonth();
+    const days = new Date(y, mo + 1, 0).getDate();
+    const lead = (first.getDay() + 6) % 7; // Monday first
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push(`<span></span>`);
+    for (let d = 1; d <= days; d++) {
+      const k = todayKey(new Date(y, mo, d));
+      const m = marks[k] || {};
+      const cls = [m.period && "period", m.pred && "pred", m.fertile && "fertile", m.ov && "ov", k === today && "today", k > today && "future"].filter(Boolean).join(" ");
+      cells.push(`<button type="button" class="cal-day ${cls}" data-cal-day="${k}" ${calEditing && k > today ? "disabled" : ""}>
+        <small>${m.cd && !calEditing ? m.cd : ""}</small><span>${d}</span>${k === today ? "<i>Heute</i>" : ""}</button>`);
+    }
+    const isNow = y === now.getFullYear() && mo === now.getMonth();
+    return `<section class="cal-month ${isNow ? "now" : ""}"><h4>${first.toLocaleDateString("de-DE", { month: "long", year: "numeric" })}</h4>
+      <div class="cal-grid">${["M", "D", "M", "D", "F", "S", "S"].map(w => `<span class="cal-wd">${w}</span>`).join("")}${cells.join("")}</div></section>`;
+  }).join("");
+  $("#cal-months").classList.toggle("editing", calEditing);
+  $("#cal-edit").textContent = calEditing ? "Fertig" : "Periode bearbeiten";
+  $("#cal-hint").hidden = !calEditing;
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-cal-open]")) return openCycleCal();
+  const b = e.target.closest("[data-cal-day]");
+  if (!b || !calEditing) return;
+  const k = b.dataset.calDay;
+  setJournal(k, { period: journalDay(k).period ? null : true });
+  renderCycleCal();
+});
+$("#cal-edit").addEventListener("click", () => { calEditing = !calEditing; renderCycleCal(); });
+$("#cycle-close").addEventListener("click", closeCycleCal);
+$("#cycle-sheet").addEventListener("click", e => { if (e.target.id === "cycle-sheet") closeCycleCal(); });

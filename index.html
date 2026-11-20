@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="app.css?v=30">
+<link rel="stylesheet" href="app.css?v=31">
 </head>
 <body>
 
@@ -269,6 +269,25 @@
   <button data-view="profile"><span class="emoji">👤</span>Profil</button>
 </nav>
 
+<!-- Cycle calendar -->
+<div class="sheet-backdrop" id="cycle-sheet" hidden>
+  <div class="sheet cal-sheet" role="dialog" aria-modal="true" aria-labelledby="cycle-title">
+    <div class="sheet-head">
+      <h2 id="cycle-title" class="brush dark">Zyklus</h2>
+      <button class="icon-btn" id="cycle-close" aria-label="Schließen">✕</button>
+    </div>
+    <div class="cal-summary" id="cal-summary"></div>
+    <div class="cal-legend">
+      <span><i class="lg period"></i>Periode</span><span><i class="lg pred"></i>Vorhersage</span>
+      <span><i class="lg fertile"></i>Fruchtbar</span><span><i class="lg ov"></i>Eisprung</span>
+    </div>
+    <div class="cal-months" id="cal-months"></div>
+    <p class="muted small center" id="cal-hint" hidden>Tippe auf die Tage, an denen du deine Periode hattest. Nochmal tippen entfernt sie.</p>
+    <p class="muted small center">Alles geschätzt und nur auf deinem Gerät. Keine Verhütungsmethode.</p>
+    <button class="btn cal-edit" id="cal-edit">Periode bearbeiten</button>
+  </div>
+</div>
+
 <!-- One meal in detail: totals and every entry -->
 <div class="sheet-backdrop" id="meal-sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="meal-title">
@@ -446,15 +465,15 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="config.js?v=30"></script>
-<script src="foods.js?v=30"></script>
-<script src="app.js?v=30"></script>
-<script src="journal.js?v=30"></script>
-<script src="trends.js?v=30"></script>
-<script src="recipes.js?v=30"></script>
-<script src="share.js?v=30"></script>
-<script src="profile.js?v=30"></script>
-<script src="feedback.js?v=30"></script>
-<script src="main.js?v=30"></script>
+<script src="config.js?v=31"></script>
+<script src="foods.js?v=31"></script>
+<script src="app.js?v=31"></script>
+<script src="journal.js?v=31"></script>
+<script src="trends.js?v=31"></script>
+<script src="recipes.js?v=31"></script>
+<script src="share.js?v=31"></script>
+<script src="profile.js?v=31"></script>
+<script src="feedback.js?v=31"></script>
+<script src="main.js?v=31"></script>
 </body>
 </html>
