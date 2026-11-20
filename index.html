@@ -242,6 +242,12 @@
     </form>
 
     <div class="card">
+      <h3><span class="emoji">📲</span> Daten von der alten App übernehmen</h3>
+      <p class="muted">Öffne die alte App, tippe dort auf „Daten kopieren“ und komm dann hierher zurück.</p>
+      <button class="btn ghost" data-move-paste>Daten einfügen</button>
+    </div>
+
+    <div class="card">
       <h3><span class="emoji">🗑️</span> Daten löschen</h3>
       <p class="muted">Löscht alle Einträge, Ziele und eigenen Lebensmittel auf diesem Gerät.</p>
       <button class="btn danger" id="reset">Alle Daten löschen</button>
@@ -389,6 +395,7 @@
       <div id="onboard-explain" hidden></div>
       <button class="btn">Ziel berechnen</button>
       <button type="button" class="btn ghost" id="onboard-skip">Ziele selbst eintragen</button>
+      <button type="button" class="add-line" data-move-paste>📲 Ich hatte die App schon: Daten übernehmen</button>
     </form>
   </div>
 </div>
@@ -431,6 +438,6 @@
 <script src="share.js?v=24"></script>
 <script src="profile.js?v=24"></script>
 <script src="feedback.js?v=24"></script>
-<script src="main.js?v=26"></script>
+<script src="main.js?v=27"></script>
 </body>
 </html>

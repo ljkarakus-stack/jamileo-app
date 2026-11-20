@@ -17,22 +17,35 @@ function backfillFibre() {
 }
 backfillFibre();
 
-// Moving from the old address: the old page hands the saved data over inside the link
-// (#umzug=<gzip, base64url>); the part after # never reaches a server
+// Moving from the old address: the old page hands the saved data over as a code
+// (#umzug=<gzip, base64url>), either inside the link or copied to the clipboard.
+// On iPhones every home screen app has its own storage, so there the code is pasted by hand.
 async function importMove(packed) {
   try {
     const bin = Uint8Array.from(atob(packed.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
     const text = await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
     const moved = JSON.parse(text);
+    if (!moved[STORE_KEY]) return false;
     const hasData = !!state.goals || Object.keys(state.days).length > 0;
-    if (moved[STORE_KEY] && (!hasData || confirm("Deine Daten von der alten App-Adresse übernehmen? Die Einträge auf diesem Gerät werden dabei ersetzt."))) {
-      for (const [k, v] of Object.entries(moved)) localStorage.setItem(k, v);
-    }
-  } catch (e) { /* broken link: start normally */ }
-  location.replace(APP_URL);
+    if (hasData && !confirm("Deine Daten von der alten App übernehmen? Die Einträge auf diesem Gerät werden dabei ersetzt.")) return true;
+    for (const [k, v] of Object.entries(moved)) localStorage.setItem(k, v);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
-if (location.hash.startsWith("#umzug=")) importMove(location.hash.slice(7));
+async function pasteMove() {
+  let text = "";
+  try { text = await navigator.clipboard.readText(); } catch (e) { /* not allowed: ask below */ }
+  if (!/umzug=/.test(text)) text = prompt("Füge hier die kopierten Daten aus der alten App ein:") || "";
+  const m = text.match(/umzug=([A-Za-z0-9_-]+)/);
+  if (m && await importMove(m[1])) return location.replace(APP_URL);
+  toast("Keine Daten gefunden. Tippe zuerst in der alten App auf „Daten kopieren“.");
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-move-paste]")) pasteMove(); });
+
+if (location.hash.startsWith("#umzug=")) importMove(location.hash.slice(7)).then(() => location.replace(APP_URL));
 else {
   if (!state.goals) openOnboarding();
   else showView("today");
