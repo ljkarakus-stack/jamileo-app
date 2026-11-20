@@ -119,8 +119,9 @@ function startChallenge(e) {
 // ---------- Weekly image ----------
 
 async function weekImage() {
-  await document.fonts.load("800 40px 'Baloo 2'");
-  await document.fonts.load("40px 'Caveat Brush'");
+  await document.fonts.load("600 40px Fraunces");
+  await document.fonts.load("italic 500 40px Fraunces");
+  await document.fonts.load("500 40px Inter");
   const keys = rangeKeys(7), tracked = trackedKeys(keys);
   const avg = avgOf(tracked.map(k => totals(k).kcal)) || 0;
   const prot = avgOf(tracked.map(k => totals(k).p)) || 0;
@@ -128,23 +129,23 @@ async function weekImage() {
   const W = 1080, H = 1350, c = document.createElement("canvas");
   c.width = W; c.height = H;
   const g = c.getContext("2d");
-  g.fillStyle = "#FBF1EC"; g.fillRect(0, 0, W, H);
-  g.fillStyle = "#F6D3DC"; g.beginPath(); g.arc(900, 160, 260, 0, 7); g.fill(); g.beginPath(); g.arc(140, 1220, 220, 0, 7); g.fill();
-  g.save(); g.translate(90, 130); g.rotate(-0.03); g.fillStyle = "#6E1A2E"; g.fillRect(0, 0, 640, 110);
-  g.fillStyle = "#FFFBFC"; g.font = "800 66px 'Baloo 2'"; g.fillText("Meine Woche", 40, 80); g.restore();
-  g.fillStyle = "#6E1A2E"; g.font = "48px 'Caveat Brush'";
-  g.fillText(`${fmtDay(keys[0])} – ${fmtDay(keys[6])}`, 100, 320);
+  g.fillStyle = "#F6EEE9"; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#F2DCDF"; g.beginPath(); g.arc(900, 160, 260, 0, 7); g.fill(); g.beginPath(); g.arc(140, 1220, 220, 0, 7); g.fill();
+  g.fillStyle = "#6E1A2E"; g.font = "600 92px Fraunces"; g.fillText("Meine Woche", 90, 210);
+  g.fillStyle = "#8C6E73"; g.font = "italic 500 46px Fraunces";
+  g.fillText(`${fmtDay(keys[0])} – ${fmtDay(keys[6])}`, 94, 300);
   const card = (y, label, value, sub) => {
-    g.fillStyle = "#FFFBFC"; g.beginPath(); g.roundRect(90, y, 900, 200, 40); g.fill();
-    g.fillStyle = "#8A5A66"; g.font = "700 40px 'Baloo 2'"; g.fillText(label, 140, y + 62);
-    g.fillStyle = "#4A0F1E"; g.font = "800 84px 'Baloo 2'"; g.fillText(value, 140, y + 155);
-    if (sub) { g.fillStyle = "#8A5A66"; g.font = "600 34px 'Baloo 2'"; g.textAlign = "right"; g.fillText(sub, 940, y + 150); g.textAlign = "left"; }
+    g.fillStyle = "#FFFBF8"; g.beginPath(); g.roundRect(90, y, 900, 200, 40); g.fill();
+    g.fillStyle = "#8C6E73"; g.font = "500 36px Inter"; g.fillText(label, 140, y + 62);
+    g.fillStyle = "#3A1520"; g.font = "600 84px Fraunces"; g.fillText(value, 140, y + 158);
+    if (sub) { g.fillStyle = "#8C6E73"; g.font = "500 32px Inter"; g.textAlign = "right"; g.fillText(sub, 940, y + 150); g.textAlign = "left"; }
   };
   card(380, "Ø Kalorien pro Tag", `${num(avg)} kcal`, `Ziel ${num(state.goals.kcal)}`);
   card(610, deficit >= 0 ? "Ø unter meinem Ziel" : "Ø über meinem Ziel", `${num(Math.abs(deficit))} kcal`, `${tracked.length} ${tracked.length === 1 ? "Tag" : "Tage"} getrackt`);
   card(840, "Ø Protein pro Tag", `${num(prot)} g`, `Ziel ${num(state.goals.p)} g`);
-  g.fillStyle = "#6E1A2E"; g.font = "800 44px 'Baloo 2'"; g.textAlign = "center";
-  g.fillText("Kalorien-Check by @jamileo__", W / 2, 1180); g.textAlign = "left";
+  g.fillStyle = "#6E1A2E"; g.font = "italic 600 48px Fraunces"; g.textAlign = "center";
+  g.fillText("Kalorien-Check", W / 2, 1170);
+  g.fillStyle = "#8C6E73"; g.font = "500 30px Inter"; g.fillText("app.jamileo.com · @jamileo__", W / 2, 1220); g.textAlign = "left";
   return new Promise(res => c.toBlob(b => res(new File([b], `meine-woche-${todayKey()}.png`, { type: "image/png" })), "image/png"));
 }
 

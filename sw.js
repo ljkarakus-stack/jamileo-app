@@ -1,11 +1,11 @@
 // Offline cache for the app shell.
-const VERSION = "kc-v27";
+const VERSION = "kc-v28";
 const SHELL = [
   "./", "index.html", "app.css", "app.js", "journal.js", "trends.js", "recipes.js", "share.js", "profile.js", "main.js", "feedback.js", "config.js", "foods.js", "manifest.webmanifest",
   "datenschutz.html", "impressum.html",
   "ideen/skyr-bowl.jpg", "ideen/haehnchen-reis-bowl.jpg", "ideen/apfel-mandeln.jpg", "ideen/ofenkartoffeln.jpg",
   "ideen/protein-doener.jpg", "ideen/tag-1600.jpg",
-  "fonts/Baloo2.ttf", "fonts/CaveatBrush.ttf", "vendor/zxing-browser.min.js",
+  "fonts/Inter.woff2", "fonts/Fraunces.woff2", "fonts/Fraunces-Italic.woff2", "vendor/zxing-browser.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
 ];
 

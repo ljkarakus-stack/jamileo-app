@@ -341,7 +341,7 @@ function renderProfile() {
   f.elements.fib.value = state.goals.fib ?? 30;
   const sf = $("#settings-form");
   sf.elements.cycle.checked = !!state.settings?.cycle;
-  sf.elements.theme.value = state.settings?.theme || "auto";
+  sf.elements.theme.value = state.settings?.theme || "light";
   fillRefeedForm();
   sf.elements.goalWeight.value = state.settings?.goalWeight ?? "";
   $("#goal-explain").innerHTML = state.profile
@@ -1058,11 +1058,11 @@ showStorageHint();
 // ---------- Theme ----------
 
 function applyTheme() {
-  const t = state.settings?.theme;
+  const t = state.settings?.theme || "light"; // light is the house style unless chosen otherwise
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
   else delete document.documentElement.dataset.theme;
   const dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.querySelector('meta[name="theme-color"]').content = dark ? "#1C1114" : "#6E1A2E";
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#17100F" : "#F6EEE9";
 }
 applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
