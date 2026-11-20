@@ -477,3 +477,4 @@ h3 .emoji, .macro-top .emoji, .sum-row .emoji, .water-head .emoji, .meal-head .e
 .meal-list { padding: 4px 16px 10px; margin-bottom: 12px; }
 .meal-list .entry:first-child { border-top: 0; }
 .meal-more { width: 100%; }
+#theme-pick { margin-bottom: 0; }

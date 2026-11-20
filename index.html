@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="app.css?v=29">
+<link rel="stylesheet" href="app.css?v=30">
 </head>
 <body>
 
@@ -164,6 +164,15 @@
       <p class="muted small">Dein Bild bleibt nur auf diesem Gerät.</p>
     </div>
     </div>
+    <div class="card">
+      <h3>Darstellung</h3>
+      <div class="seg" id="theme-pick">
+        <button type="button" data-theme-pick="light">☀️ Hell</button>
+        <button type="button" data-theme-pick="dark">🌙 Dunkel</button>
+        <button type="button" data-theme-pick="auto">Wie Handy</button>
+      </div>
+    </div>
+
     <form class="card form" id="goals-form">
       <h3>Deine Tagesziele</h3>
       <label>Kalorien <span><input type="number" name="kcal" min="800" max="6000" inputmode="numeric" required> kcal</span></label>
@@ -180,13 +189,6 @@
     <form class="card form" id="settings-form">
       <h3><span class="emoji">⚙️</span> Persönliches</h3>
       <label>Zielgewicht <span><input type="number" name="goalWeight" step="0.1" min="30" max="300" inputmode="decimal" placeholder="optional"> kg</span></label>
-      <label>Darstellung
-        <select name="theme">
-          <option value="auto">Automatisch (wie das Handy)</option>
-          <option value="light">Hell</option>
-          <option value="dark">Dunkel</option>
-        </select>
-      </label>
       <label class="check"><input type="checkbox" name="cycle"> Zyklus mittracken</label>
       <p class="muted small">Mit Zyklus-Tracking kannst du deine Periode eintragen. Die App schätzt daraus deine Zyklusphase und zeigt dir nach ein paar Monaten Muster bei Hunger, Energie und Gewicht. Alles bleibt nur auf deinem Gerät. Keine medizinische Auswertung und keine Verhütungsmethode.</p>
       <button class="btn">Speichern</button>
@@ -444,15 +446,15 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="config.js?v=29"></script>
-<script src="foods.js?v=29"></script>
-<script src="app.js?v=29"></script>
-<script src="journal.js?v=29"></script>
-<script src="trends.js?v=29"></script>
-<script src="recipes.js?v=29"></script>
-<script src="share.js?v=29"></script>
-<script src="profile.js?v=29"></script>
-<script src="feedback.js?v=29"></script>
-<script src="main.js?v=29"></script>
+<script src="config.js?v=30"></script>
+<script src="foods.js?v=30"></script>
+<script src="app.js?v=30"></script>
+<script src="journal.js?v=30"></script>
+<script src="trends.js?v=30"></script>
+<script src="recipes.js?v=30"></script>
+<script src="share.js?v=30"></script>
+<script src="profile.js?v=30"></script>
+<script src="feedback.js?v=30"></script>
+<script src="main.js?v=30"></script>
 </body>
 </html>

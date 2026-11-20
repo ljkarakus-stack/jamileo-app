@@ -1,5 +1,5 @@
 // Offline cache for the app shell.
-const VERSION = "kc-v29";
+const VERSION = "kc-v30";
 const SHELL = [
   "./", "index.html", "app.css", "app.js", "journal.js", "trends.js", "recipes.js", "share.js", "profile.js", "main.js", "feedback.js", "config.js", "foods.js", "manifest.webmanifest",
   "datenschutz.html", "impressum.html",

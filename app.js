@@ -391,7 +391,6 @@ function renderProfile() {
   f.elements.fib.value = state.goals.fib ?? 30;
   const sf = $("#settings-form");
   sf.elements.cycle.checked = !!state.settings?.cycle;
-  sf.elements.theme.value = state.settings?.theme || "light";
   fillRefeedForm();
   sf.elements.goalWeight.value = state.settings?.goalWeight ?? "";
   $("#goal-explain").innerHTML = state.profile
@@ -1036,8 +1035,7 @@ $("#settings-form").addEventListener("submit", e => {
   e.preventDefault();
   const f = e.target.elements;
   const gw = parseFloat(f.goalWeight.value);
-  state.settings = { ...state.settings, cycle: f.cycle.checked, goalWeight: gw > 0 ? gw : null, theme: f.theme.value };
-  applyTheme();
+  state.settings = { ...state.settings, cycle: f.cycle.checked, goalWeight: gw > 0 ? gw : null };
   save();
   toast("Gespeichert");
 });
@@ -1117,12 +1115,21 @@ showStorageHint();
 
 function applyTheme() {
   const t = state.settings?.theme || "light"; // light is the house style unless chosen otherwise
+  $$("#theme-pick button").forEach(b => b.classList.toggle("active", b.dataset.themePick === t));
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
   else delete document.documentElement.dataset.theme;
   const dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelector('meta[name="theme-color"]').content = dark ? "#17100F" : "#F6EEE9";
 }
 applyTheme();
+// Takes effect right away, no extra save button
+$("#theme-pick").addEventListener("click", e => {
+  const b = e.target.closest("[data-theme-pick]");
+  if (!b) return;
+  state.settings = { ...state.settings, theme: b.dataset.themePick };
+  save();
+  applyTheme();
+});
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 
 // ---------- Swipe between days ----------
