@@ -1,11 +1,12 @@
 "use strict";
 
 const STORE_KEY = "jamileo-kalorien-check-v1";
+// share: part of the daily calorie goal suggested for the meal
 const SLOTS = [
-  { id: "fruehstueck", name: "Frühstück", emoji: "🥣" },
-  { id: "mittag", name: "Mittagessen", emoji: "🍗" },
-  { id: "abend", name: "Abendessen", emoji: "🥔" },
-  { id: "snack", name: "Snacks", emoji: "🍎" },
+  { id: "fruehstueck", name: "Frühstück", emoji: "☕", share: 0.30 },
+  { id: "mittag", name: "Mittagessen", emoji: "🍝", share: 0.35 },
+  { id: "abend", name: "Abendessen", emoji: "🥗", share: 0.25 },
+  { id: "snack", name: "Snacks", emoji: "🍎", share: 0.10 },
 ];
 const GLASS_ML = 250;
 // Default clock time per meal when logging for another day
@@ -244,22 +245,71 @@ function renderToday() {
   $("#glasses").innerHTML = Array.from({ length: glasses }, (_, i) =>
     `<button class="glass ${i < drunk / GLASS_ML ? "full" : ""}" data-glass="${i}" aria-label="${(i + 1) * GLASS_ML} ml"></button>`).join("");
 
+  // One compact row per meal; tapping it opens the meal with all its entries
   $("#meals").innerHTML = SLOTS.map(s => {
-    const list = day().entries.filter(e => e.slot === s.id).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+    const list = slotEntries(s.id);
     const kcal = list.reduce((a, e) => a + e.kcal, 0);
-    return `<div class="card meal">
-      <div class="meal-head"><h3><span class="emoji">${s.emoji}</span> ${s.name}</h3><small>${num(kcal)} kcal</small></div>
-      ${list.length ? list.map(e => `<button class="entry" data-entry="${e.id}">
-          <span class="n">${esc(e.name)}</span><span class="k">${num(e.kcal)} kcal</span>
-          <span class="d">${e.time ? `<span class="t">${e.time}</span> · ` : ""}${esc(e.amountLabel)} · ${num(e.p, 1)} g Protein · ${num(e.kh, 1)} g KH · ${num(e.f, 1)} g Fett${e.fib ? ` · ${num(e.fib, 1)} g Ballastst.` : ""}</span>
-        </button>`).join("") : `<p class="empty">Noch nichts eingetragen</p>`}
-      ${!list.length && prevSlot(s.id).length ? `<button class="add-line copy" data-copy-slot="${s.id}">↺ Wie ${prevLabel()}: ${prevSlot(s.id).length} ${prevSlot(s.id).length === 1 ? "Eintrag" : "Einträge"}, ${num(prevSlot(s.id).reduce((a, e) => a + e.kcal, 0))} kcal</button>` : ""}
-      <button class="add-line" data-add-slot="${s.id}">+ ${s.name} hinzufügen</button>
+    const target = g.kcal * s.share;
+    const C = 2 * Math.PI * 22;
+    return `<div class="meal-row">
+      <button class="meal-open" data-meal="${s.id}">
+        <span class="meal-ring">
+          <svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="22" class="ring-bg"/>
+            <circle cx="26" cy="26" r="22" class="ring-fg ${kcal > target * 1.1 ? "over" : ""}" style="stroke-dasharray:${C};stroke-dashoffset:${C * (1 - Math.min(1, kcal / target))}"/></svg>
+          <span class="emoji">${s.emoji}</span>
+        </span>
+        <span class="meal-info">
+          <b>${s.name} <span class="arrow">›</span></b>
+          <span class="meal-kcal">${num(kcal)} / ${num(target)} kcal</span>
+          ${list.length ? `<span class="meal-items">${esc(list.map(e => e.name).join(", "))}</span>` : ""}
+        </span>
+      </button>
+      <button class="meal-plus" data-add-slot="${s.id}" aria-label="${s.name} hinzufügen">+</button>
     </div>`;
   }).join("");
+  if (openMeal) renderMeal();
   const prevAll = day(shiftKey(currentDay, -1)).entries;
   $("#copy-day").hidden = !!day().entries.length || !prevAll.length;
   $("#copy-day").textContent = `↺ Ganzen Tag von ${prevLabel()} übernehmen (${num(prevAll.reduce((a, e) => a + e.kcal, 0))} kcal)`;
+}
+
+function slotEntries(slot, k = currentDay) {
+  return day(k).entries.filter(e => e.slot === slot).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+}
+
+// ---------- Meal detail ----------
+
+let openMeal = null;
+
+function showMeal(slot) {
+  openMeal = slot;
+  $("#meal-sheet").hidden = false;
+  renderMeal();
+}
+
+function closeMeal() {
+  openMeal = null;
+  $("#meal-sheet").hidden = true;
+}
+
+function renderMeal() {
+  const s = SLOTS.find(x => x.id === openMeal);
+  const list = slotEntries(s.id);
+  const t = addUp(list);
+  const target = dayGoals(currentDay).kcal * s.share;
+  $("#meal-title").textContent = s.name;
+  $("#meal-sub").textContent = `${$("#day-name").textContent}, ${$("#day-date").textContent} · Richtwert ${num(target)} kcal`;
+  const stat = (v, unit, label) => `<div><b>${num(v, unit === "kcal" ? 0 : 1)} ${unit}</b><span>${label}</span></div>`;
+  $("#meal-stats").innerHTML = stat(t.kcal, "kcal", "Kalorien") + stat(t.p, "g", "Protein")
+    + stat(t.kh, "g", "Kohlenhydrate") + stat(t.f, "g", "Fett")
+    + `<p class="meal-fib muted">Ballaststoffe ${num(t.fib, 1)} g</p>`;
+  const prev = prevSlot(s.id);
+  $("#meal-list").innerHTML = list.length
+    ? list.map(e => `<button class="entry" data-entry="${e.id}">
+        <span class="n">${esc(e.name)}</span><span class="k">${num(e.kcal)} kcal ›</span>
+        <span class="d">${e.time ? `<span class="t">${e.time}</span> · ` : ""}${esc(e.amountLabel)} · ${num(e.p, 1)} g Protein · ${num(e.kh, 1)} g KH · ${num(e.f, 1)} g Fett</span>
+      </button>`).join("")
+    : `<p class="empty">Noch nichts eingetragen.</p>${prev.length ? `<button class="add-line copy" data-copy-slot="${s.id}">↺ Wie ${prevLabel()}: ${prev.length} ${prev.length === 1 ? "Eintrag" : "Einträge"}, ${num(prev.reduce((a, e) => a + e.kcal, 0))} kcal</button>` : ""}`;
 }
 
 // ---------- Copy from the previous day ----------
@@ -928,6 +978,7 @@ document.addEventListener("click", e => {
     renderToday();
   }
   else if (b.dataset.addSlot) openSheet(b.dataset.addSlot);
+  else if (b.dataset.meal) showMeal(b.dataset.meal);
   else if (b.dataset.entry) editEntry(b.dataset.entry);
   else if (b.dataset.tab && b.closest("#add-tabs")) showTab(b.dataset.tab, true);
   else if (b.dataset.cat) { activeCat = b.dataset.cat; $("#search").value = ""; renderFoodList(); }
@@ -951,7 +1002,14 @@ document.addEventListener("click", e => {
 $("#fab").addEventListener("click", () => openSheet());
 $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") closeSheet(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("#sheet").hidden) closeSheet();
+  else if (openMeal) closeMeal();
+});
+$("#meal-close").addEventListener("click", closeMeal);
+$("#meal-sheet").addEventListener("click", e => { if (e.target.id === "meal-sheet") closeMeal(); });
+$("#meal-add").addEventListener("click", () => openSheet(openMeal));
 $("#search").addEventListener("input", () => { onlineQuery = null; renderFoodList(); });
 // The keyboard's search key (🔍 / "Suchen") submits the form; this works reliably on phones
 $("#search-form").addEventListener("submit", e => { e.preventDefault(); searchOnline(); });

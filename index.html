@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="app.css?v=28">
+<link rel="stylesheet" href="app.css?v=29">
 </head>
 <body>
 
@@ -61,6 +61,10 @@
 
     <div class="card macros" id="macros"></div>
 
+    <button class="add-line copy" id="copy-day" hidden></button>
+    <h3 class="section-head">Mahlzeiten</h3>
+    <div class="card meals" id="meals"></div>
+
     <div class="card water">
       <div class="water-head">
         <span><span class="emoji">💧</span> Wasser</span>
@@ -70,9 +74,6 @@
     </div>
 
     <div class="card journal" id="journal"></div>
-
-    <button class="add-line copy" id="copy-day" hidden></button>
-    <div id="meals"></div>
 
     <a class="card insta" href="https://www.instagram.com/jamileo__/" target="_blank" rel="noopener">
       <span class="script">Mehr Kalorien-Checks</span>
@@ -266,6 +267,20 @@
   <button data-view="profile"><span class="emoji">👤</span>Profil</button>
 </nav>
 
+<!-- One meal in detail: totals and every entry -->
+<div class="sheet-backdrop" id="meal-sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="meal-title">
+    <div class="sheet-head">
+      <h2 id="meal-title" class="brush dark"></h2>
+      <button class="icon-btn" id="meal-close" aria-label="Schließen">✕</button>
+    </div>
+    <p class="muted meal-sub" id="meal-sub"></p>
+    <div class="meal-stats" id="meal-stats"></div>
+    <div class="card meal-list" id="meal-list"></div>
+    <button class="btn meal-more" id="meal-add">+ Mehr hinzufügen</button>
+  </div>
+</div>
+
 <!-- Add-food sheet -->
 <div class="sheet-backdrop" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -429,15 +444,15 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="config.js?v=28"></script>
-<script src="foods.js?v=28"></script>
-<script src="app.js?v=28"></script>
-<script src="journal.js?v=28"></script>
-<script src="trends.js?v=28"></script>
-<script src="recipes.js?v=28"></script>
-<script src="share.js?v=28"></script>
-<script src="profile.js?v=28"></script>
-<script src="feedback.js?v=28"></script>
-<script src="main.js?v=28"></script>
+<script src="config.js?v=29"></script>
+<script src="foods.js?v=29"></script>
+<script src="app.js?v=29"></script>
+<script src="journal.js?v=29"></script>
+<script src="trends.js?v=29"></script>
+<script src="recipes.js?v=29"></script>
+<script src="share.js?v=29"></script>
+<script src="profile.js?v=29"></script>
+<script src="feedback.js?v=29"></script>
+<script src="main.js?v=29"></script>
 </body>
 </html>
