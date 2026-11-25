@@ -229,6 +229,9 @@ const FOODS = [
 
   // jamileo-Checks: products from the Kalorien-Checks on Instagram, values from the package (per 100 g).
   // `check` names the post; these foods are marked in the list and come first in searches.
+  { id: "chk-iglo-kartoffel-haehnchen", name: "iglo Kartoffel-Hähnchenpfanne (Honig-Senf)", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 88, p: 5.1, kh: 9.5, f: 2.8, fib: 2.4, units: [["Packung", 425], ["Portion", 350]] },
+  { id: "chk-iglo-huehnerfrikassee", name: "iglo Hühner-Frikassee mit Champignons", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 88, p: 4.6, kh: 11, f: 2.6, fib: 1.1, units: [["Packung", 425], ["Portion", 350]] },
+  { id: "chk-frosta-reis-haehnchen", name: "FRoSTA Reis-Hähnchen-Pfanne (XXL)", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 115, p: 4.6, kh: 14.9, f: 3.6, fib: 1.9, units: [["Packung", 800], ["Portion", 350]] },
   { id: "chk-frosta-bratkartoffel-haehnchen", name: "FRoSTA Bratkartoffel-Hähnchen-Pfanne", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 94, p: 4.7, kh: 9.5, f: 3.8, fib: 1.5, units: [["Packung", 500], ["Portion", 350]] },
   // The label lists no fibre value
   { id: "chk-frosta-spaetzle", name: "FRoSTA Spätzle-Pfanne", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 109, p: 6.8, kh: 12.7, f: 3, fib: 0, units: [["Packung", 500], ["Portion", 350]] },
