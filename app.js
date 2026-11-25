@@ -470,13 +470,8 @@ function renderFoodList() {
   else if (activeCat === "Alle") list = allFoods();
   else list = FOODS.filter(f => f.cat === activeCat);
   if (words.length) {
-    list = allFoods().filter(f => words.every(w => fold(f.name).includes(w)));
-    // Whole-word matches first ("ei" → Ei before Eiklar), then names starting with the word
-    const rank = f => {
-      const name = fold(f.name);
-      return name.split(/[^a-z0-9]+/).includes(words[0]) ? 0 : name.startsWith(words[0]) ? 1 : 2;
-    };
-    list.sort((a, b) => rank(a) - rank(b));
+    list = allFoods().map(f => ({ f, r: matchRank(f.name, words) })).filter(x => x.r < 9)
+      .sort((a, b) => a.r - b.r).map(x => x.f);
   }
 
   const row = f => `<button class="food" data-food="${esc(f.id)}">
@@ -492,37 +487,150 @@ function renderFoodList() {
     if (quick) quick += `<h3 class="list-head">Alle Lebensmittel</h3>`;
   }
   $("#food-list").innerHTML = list.length ? quick + list.map(row).join("")
-    : `<p class="empty">${activeCat === "Zuletzt" && !words.length ? "Hier erscheinen deine zuletzt genutzten Lebensmittel." : activeCat === "Favoriten" ? "Tippe beim Eintragen auf ☆, um ein Lebensmittel zu deinen Favoriten zu machen." : "In der Liste nicht gefunden."}</p>`;
+    : `<p class="empty">${activeCat === "Zuletzt" && !words.length ? "Hier erscheinen deine zuletzt genutzten Lebensmittel." : activeCat === "Favoriten" ? "Tippe beim Eintragen auf ☆, um ein Lebensmittel zu deinen Favoriten zu machen." : words.length ? "Nicht in unserer Liste – schau unten bei den Markenprodukten." : "In der Liste nicht gefunden."}</p>`;
 
   clearTimeout(autoOnline);
-  if (raw.length < 3) { $("#online").innerHTML = ""; return; }
+  if (raw.length < 3) { $("#online").innerHTML = ""; onlineQuery = null; return; }
   if (onlineQuery === raw) return; // results for this exact text are already shown
   const label = `🔎 „${raw}“ online suchen`;
   const btn = $("#online [data-online-search]");
   if (btn && $("#online").children.length === 1) btn.textContent = label;
   else $("#online").innerHTML = `<button class="add-line" data-online-search>${esc(label)}</button>`;
-  // Nothing in our list: look online by itself once the typing pauses
-  if (!list.length && words.length) autoOnline = setTimeout(() => searchOnline(false), 900);
+  // Brand products come from the online database: look there by itself once the typing pauses
+  autoOnline = setTimeout(() => searchOnline(false), 700);
+}
+
+// ---------- Local search: synonyms, singular/plural and small typos ----------
+
+// Words people use for the same food; any of them finds the others
+const SYNONYMS = [
+  ["haehnchen", "huehnchen", "huhn", "chicken", "gefluegel"], ["joghurt", "jogurt", "yoghurt", "yogurt"],
+  ["pute", "puten", "truthahn"], ["nudeln", "nudel", "pasta", "spaghetti"], ["kartoffel", "erdapfel"],
+  ["karotte", "moehre", "mohrruebe", "rueebli"], ["quark", "topfen"], ["sahne", "rahm", "obers"],
+  ["broetchen", "semmel", "schrippe", "weckle"], ["frikadelle", "bulette", "fleischpflanzerl"],
+  ["pfannkuchen", "eierkuchen", "pancake", "palatschinke"], ["wuerstchen", "wiener", "frankfurter"],
+  ["schokolade", "schoko", "schoki"], ["kaese", "cheese"], ["lachs", "salmon"], ["thunfisch", "tuna"],
+  ["erdnussmus", "erdnussbutter", "peanutbutter"], ["haferflocken", "oats", "porridge"],
+  ["protein", "eiweiss"], ["ei", "eier"], ["hackfleisch", "hack", "gehacktes"], ["rind", "beef"],
+  ["schwein", "pork"], ["kaffee", "coffee", "latte"], ["paprika", "peperoni"], ["aubergine", "melanzani"],
+  ["blumenkohl", "karfiol"], ["tomate", "paradeiser"], ["apfelschorle", "schorle"], ["pommes", "fritten"],
+  ["mais", "corn"], ["beeren", "berries"], ["reis", "rice"], ["brot", "bread"], ["milch", "milk"],
+];
+const SYN = new Map();
+for (const group of SYNONYMS) for (const w of group) SYN.set(w, group);
+
+// Damerau-Levenshtein distance, stopping early once it exceeds max
+function editDistance(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    let rowMin = Infinity;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      rowMin = Math.min(rowMin, d[i][j]);
+    }
+    if (rowMin > max) return max + 1;
+  }
+  return d[a.length][b.length];
+}
+
+// How well a food name fits the search words: 0 best ... 3 typo; 9 = no match. Every word must fit.
+function matchRank(name, words) {
+  const folded = fold(name);
+  const tokens = folded.split(/[^a-z0-9]+/).filter(Boolean);
+  let worst = 0;
+  for (const [i, w] of words.entries()) {
+    const stem = w.length > 4 ? w.replace(/(en|n|e|s)$/, "") : w;
+    const alts = [w, stem, ...(SYN.get(w) || SYN.get(stem) || [])];
+    let r = 9;
+    if (tokens.includes(w)) r = 0;
+    else if (tokens.some(t => t.startsWith(w))) r = 1;
+    else if (alts.some(a => folded.includes(a))) r = 2;
+    else if (w.length >= 4) {
+      const max = w.length >= 8 ? 2 : 1;
+      if (tokens.some(t => editDistance(w, t, max) <= max || (t.length > w.length && editDistance(w, t.slice(0, w.length), max) <= max))) r = 3;
+    }
+    if (r === 9) return 9;
+    // The first word decides most of the order ("ei" → Ei before Eiklar)
+    worst = Math.max(worst, i === 0 ? r : Math.min(r, 2));
+  }
+  return worst;
 }
 
 // ---------- Online search (Open Food Facts) ----------
+// Two searches of the same database run side by side: the classic one finds brand + product
+// ("milbona skyr") well but is often slow; the newer one answers fast. Results are merged.
 
 let onlineResults = {};
 let onlineQuery = null;   // text whose results (or loading state) are shown in #online
 let onlineSeq = 0;        // increases with every online search, so only the latest one shows results
 let autoOnline = null;
+const onlineCache = new Map();
+
+const OFF_FIELDS = "code,product_name,product_name_de,brands,nutriments";
+
+// Brands come as "Milbona, Lidl" or ["xx:milbona"]
+function firstBrand(brands) {
+  const b = (Array.isArray(brands) ? brands[0] : brands?.split(",")[0])?.replace(/^[a-z]{2}:/, "").trim();
+  return b ? b.charAt(0).toUpperCase() + b.slice(1) : "";
+}
 
 // Turn an Open Food Facts product into one of our foods, or null if it has no kcal value
 function offFood(product, code) {
   const n = product?.nutriments;
   if (!n || n["energy-kcal_100g"] == null) return null;
-  const name = [product.product_name_de || product.product_name, product.brands?.split(",")[0]]
+  const name = [product.product_name_de || product.product_name, firstBrand(product.brands)]
     .filter(Boolean).join(" · ") || `Produkt ${code}`;
   return {
     id: "c-" + code, name, cat: "Eigene", barcode: code, portion: null,
     kcal: +n["energy-kcal_100g"] || 0, p: +n.proteins_100g || 0, kh: +n.carbohydrates_100g || 0, f: +n.fat_100g || 0, fib: +n.fiber_100g || 0,
   };
 }
+
+async function fetchJson(url, ms) {
+  const r = await fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function searchClassic(q) {
+  const data = await fetchJson("https://world.openfoodfacts.org/cgi/search.pl?" + new URLSearchParams({
+    search_terms: q, search_simple: 1, action: "process", json: 1, page_size: 30, sort_by: "unique_scans_n",
+    tagtype_0: "countries", tag_contains_0: "contains", tag_0: "germany", fields: OFF_FIELDS,
+  }), 15000);
+  return (data.products || []).map(p => offFood(p, p.code));
+}
+
+// The fast search returns names and barcodes, but no nutrition values for most German products.
+// It only finds a brand in its own field: for "iglo hähnchen" it also tries iglo and hähnchen as the brand.
+async function searchFastCodes(q) {
+  const words = q.replace(/["\\:]/g, " ").split(/\s+/).filter(Boolean);
+  const brand = (w, rest) => `${rest.join(" ")} brands:"xx:${w.toLowerCase()}"`;
+  const queries = [words.join(" ")];
+  if (words.length > 1) queries.push(brand(words[0], words.slice(1)), brand(words.at(-1), words.slice(0, -1)));
+  const results = await Promise.allSettled(queries.map(query => fetchJson("https://search.openfoodfacts.org/search?" + new URLSearchParams({
+    q: `${query} countries:"en:germany"`, langs: "de", page_size: 20, fields: "code",
+  }), 10000)));
+  if (results.every(r => r.status === "rejected")) throw new Error("offline");
+  // Brand matches first: they are what someone typing a brand is looking for
+  return [...new Set([1, 2, 0].flatMap(i => results[i]?.value?.hits || []).map(h => h.code).filter(Boolean))];
+}
+
+// Nutrition values of one product, remembered for the session
+const productCache = new Map();
+function productFood(code) {
+  if (!productCache.has(code)) {
+    productCache.set(code, fetchJson(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_de,brands,nutriments`, 10000)
+      .then(d => d.status === 1 ? offFood(d.product, code) : null)
+      .catch(() => { productCache.delete(code); return null; }));
+  }
+  return productCache.get(code);
+}
+
+const wait = ms => new Promise(res => setTimeout(res, ms));
 
 async function searchOnline(closeKeyboard = true) {
   const q = $("#search").value.trim();
@@ -533,41 +641,52 @@ async function searchOnline(closeKeyboard = true) {
   // Close the keyboard so the results are visible right away
   if (closeKeyboard) $("#search").blur();
   const box = $("#online");
+  if (onlineCache.has(q)) return showOnline(onlineCache.get(q), false);
   box.innerHTML = `<p class="muted center loading-dots">🔎 Suche „${esc(q)}“ online</p>`;
-  const url = "https://world.openfoodfacts.org/cgi/search.pl?" + new URLSearchParams({
-    search_terms: q, search_simple: 1, action: "process", json: 1, page_size: 30, sort_by: "unique_scans_n",
-    tagtype_0: "countries", tag_contains_0: "contains", tag_0: "germany",
-    fields: "code,product_name,product_name_de,brands,nutriments",
-  });
-  let data = null;
-  // The database is sometimes slow or briefly busy: one quiet retry before giving up
-  for (let attempt = 0; attempt < 2 && !data; attempt++) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined });
-      if (!r.ok) throw new Error(r.status);
-      data = await r.json();
-    } catch (e) {
-      if (attempt === 0) await new Promise(res => setTimeout(res, 1200));
+
+  const current = () => seq === onlineSeq && $("#search").value.trim() === q;
+  const parts = [null, null];
+  let done = 0, failed = 0;
+  const update = () => {
+    if (!current()) return;
+    const seen = new Set();
+    const foods = [...(parts[0] || []), ...(parts[1] || [])]
+      .filter(f => f && f.name && plausible(f) && !seen.has(f.id) && seen.add(f.id)).slice(0, 40);
+    if (done === 2 && failed === 2) {
+      onlineQuery = null;
+      box.innerHTML = `<p class="empty center">Die Online-Suche ist gerade nicht erreichbar. Versuch es gleich nochmal.</p>
+        <button class="add-line" data-online-search>Nochmal versuchen</button>`;
+      return;
     }
-    // A newer search started, or the text really changed meanwhile
-    if (seq !== onlineSeq || $("#search").value.trim() !== q) return;
-  }
-  if (!data) {
-    onlineQuery = null;
-    box.innerHTML = `<p class="empty center">Die Online-Suche ist gerade nicht erreichbar. Versuch es gleich nochmal.</p>
-      <button class="add-line" data-online-search>Nochmal versuchen</button>`;
-    return;
-  }
+    if (done === 2 && !failed) onlineCache.set(q, foods);
+    if (foods.length || done === 2) showOnline(foods, done < 2);
+  };
+  const classic = searchClassic(q)
+    .then(list => { parts[0] = list; return list; }, () => { failed++; return null; })
+    .finally(() => { done++; update(); });
+  // Fill up with the fast search when the classic one is slow, fails or finds little
+  searchFastCodes(q)
+    .then(async codes => {
+      const early = await Promise.race([classic, wait(2500).then(() => undefined)]);
+      if (early && early.filter(Boolean).length >= 10) return [];
+      const have = new Set((parts[0] || []).filter(Boolean).map(f => f.id));
+      const fresh = codes.filter(c => !have.has("c-" + c)).slice(0, 10);
+      return (await Promise.all(fresh.map(productFood))).filter(Boolean);
+    })
+    .then(list => { parts[1] = list; }, () => { failed++; })
+    .finally(() => { done++; update(); });
+}
+
+function showOnline(foods, more) {
   onlineResults = {};
-  const foods = (data.products || []).map(pr => offFood(pr, pr.code)).filter(f => f && f.name && plausible(f));
   foods.forEach(f => onlineResults[f.id] = f);
-  box.innerHTML = foods.length
-    ? `<h3 class="online-head">Online gefunden</h3><div class="list">${foods.map(f => `<button class="food" data-online="${esc(f.id)}">
+  $("#online").innerHTML = foods.length
+    ? `<h3 class="online-head">Markenprodukte (online)</h3><div class="list">${foods.map(f => `<button class="food" data-online="${esc(f.id)}">
         <span class="n">${esc(f.name)}</span><span class="k">${num(f.kcal)} kcal</span>
         <span class="d">pro 100 g · ${num(f.p, 1)} g Protein · ${num(f.kh, 1)} g KH · ${num(f.f, 1)} g Fett</span>
       </button>`).join("")}</div>
-      <p class="muted small center">Daten: Open Food Facts. Bitte kurz mit der Packung vergleichen.</p>
-      <h3 class="online-head">In der App</h3>`
+      ${more ? `<p class="muted small center loading-dots">Weitere werden gesucht</p>` : ""}
+      <p class="muted small center">Daten: Open Food Facts. Bitte kurz mit der Packung vergleichen.</p>`
     : `<p class="empty center">Online nichts gefunden. Trag es unter „Manuell“ ein oder scanne die Packung.</p>`;
 }
 
