@@ -239,6 +239,7 @@ textarea:focus { outline: none; border-color: var(--bordeaux); }
 .food .n { font-weight: 600; }
 .food .k { font-weight: 600; white-space: nowrap; }
 .food .d { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+.food .d .check-badge { color: var(--bordeaux); font-weight: 600; }
 
 .plan { margin-bottom: 12px; }
 #online:not(:empty) { margin: 10px 0 4px; }

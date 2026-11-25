@@ -88,7 +88,7 @@ function loadBLS() {
   if (blsLoading) return blsLoading;
   blsLoading = new Promise(res => {
     const s = document.createElement("script");
-    s.src = "bls.js?v=34";
+    s.src = "bls.js?v=35";
     s.onload = () => {
       blsFoods = (window.BLS_DATA || "").split("\n").map(line => {
         const [code, name, kcal, p, kh, f, fib] = line.split("|");
@@ -113,7 +113,8 @@ function findFoods(words, limit = 80) {
   const rank = typos => all.map(f => ({ f, r: matchRank(f.name, words, typos) })).filter(x => x.r < 9);
   let hits = rank(false);
   if (hits.length < 10) hits = rank(true);
-  return hits.sort((a, b) => a.r - b.r).slice(0, limit).map(x => x.f);
+  // Same match quality: products from our own Kalorien-Checks first
+  return hits.sort((a, b) => a.r - b.r || !!b.f.check - !!a.f.check).slice(0, limit).map(x => x.f);
 }
 function foodById(id) {
   const idea = id.startsWith("idee-") && ideaById(id.slice(5));
@@ -495,9 +496,11 @@ function showTab(tab, chosen) {
   if (tab === "scan") startScan();
 }
 
+const CHECKS = "✓ jamileo-Checks"; // category chip for products from the Kalorien-Checks
+
 function renderFoodList() {
   const favs = (state.favorites || []).map(foodById).filter(Boolean);
-  const cats = ["Alle", ...(favs.length ? ["Favoriten"] : []), "Zuletzt", ...(state.custom.length ? ["Eigene"] : []), ...CATEGORIES];
+  const cats = ["Alle", ...(favs.length ? ["Favoriten"] : []), "Zuletzt", ...(FOODS.some(f => f.check) ? [CHECKS] : []), ...(state.custom.length ? ["Eigene"] : []), ...CATEGORIES];
   if (!cats.includes(activeCat)) activeCat = "Alle";
   $("#cats").innerHTML = cats.map(c => `<button class="chip ${c === activeCat ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
 
@@ -507,13 +510,14 @@ function renderFoodList() {
   if (activeCat === "Favoriten") list = favs;
   else if (activeCat === "Zuletzt") list = state.recent.map(foodById).filter(Boolean);
   else if (activeCat === "Eigene") list = state.custom;
+  else if (activeCat === CHECKS) list = FOODS.filter(f => f.check);
   else if (activeCat === "Alle") list = allFoods();
   else list = FOODS.filter(f => f.cat === activeCat);
   if (words.length) list = findFoods(words);
 
   const row = f => `<button class="food" data-food="${esc(f.id)}">
       <span class="n">${isFav(f.id) ? "⭐ " : ""}${esc(f.name)}</span><span class="k">${num(f.kcal)} kcal</span>
-      <span class="d">${baseLabel(f)} · ${num(f.p, 1)} g Protein · ${num(f.kh, 1)} g KH · ${num(f.f, 1)} g Fett${f.src === "bls" ? " · BLS" : ""}</span>
+      <span class="d">${f.check ? `<b class="check-badge">✓ jamileo-Check</b> · ` : ""}${baseLabel(f)} · ${num(f.p, 1)} g Protein · ${num(f.kh, 1)} g KH · ${num(f.f, 1)} g Fett${f.src === "bls" ? " · BLS" : ""}</span>
     </button>`;
   // Without a search, favorites and recent foods come first for fast logging
   let quick = "";

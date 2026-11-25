@@ -226,6 +226,12 @@ const FOODS = [
   { id: "gericht-sushi", name: "Sushi Maki (8 Stück)", cat: "Fast Food & Gerichte", portion: "Portion", kcal: 330, p: 10, kh: 62, f: 4, fib: 2 },
   { id: "gericht-falafel-wrap", name: "Falafel-Dürüm", cat: "Fast Food & Gerichte", portion: "Stück", kcal: 750, p: 20, kh: 85, f: 35, fib: 12 },
   { id: "gericht-lasagne", name: "Lasagne", cat: "Fast Food & Gerichte", portion: "Portion", kcal: 600, p: 30, kh: 45, f: 32, fib: 4 },
+
+  // jamileo-Checks: products from the Kalorien-Checks on Instagram, values from the package (per 100 g).
+  // `check` names the post; these foods are marked in the list and come first in searches.
+  { id: "chk-frosta-bratkartoffel-haehnchen", name: "FRoSTA Bratkartoffel-Hähnchen-Pfanne", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 94, p: 4.7, kh: 9.5, f: 3.8, fib: 1.5, units: [["Packung", 500], ["Portion", 350]] },
+  // The label lists no fibre value
+  { id: "chk-frosta-spaetzle", name: "FRoSTA Spätzle-Pfanne", cat: "Fast Food & Gerichte", check: "TK-Pfannen", kcal: 109, p: 6.8, kh: 12.7, f: 3, fib: 0, units: [["Packung", 500], ["Portion", 350]] },
 ];
 
 // Order of the category chips in the food list
