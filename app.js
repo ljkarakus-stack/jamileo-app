@@ -497,7 +497,10 @@ function renderFoodList() {
   clearTimeout(autoOnline);
   if (raw.length < 3) { $("#online").innerHTML = ""; return; }
   if (onlineQuery === raw) return; // results for this exact text are already shown
-  $("#online").innerHTML = `<button class="add-line" data-online-search>🔎 „${esc(raw)}“ online suchen</button>`;
+  const label = `🔎 „${raw}“ online suchen`;
+  const btn = $("#online [data-online-search]");
+  if (btn && $("#online").children.length === 1) btn.textContent = label;
+  else $("#online").innerHTML = `<button class="add-line" data-online-search>${esc(label)}</button>`;
   // Nothing in our list: look online by itself once the typing pauses
   if (!list.length && words.length) autoOnline = setTimeout(() => searchOnline(false), 900);
 }
@@ -506,6 +509,7 @@ function renderFoodList() {
 
 let onlineResults = {};
 let onlineQuery = null;   // text whose results (or loading state) are shown in #online
+let onlineSeq = 0;        // increases with every online search, so only the latest one shows results
 let autoOnline = null;
 
 // Turn an Open Food Facts product into one of our foods, or null if it has no kcal value
@@ -525,6 +529,7 @@ async function searchOnline(closeKeyboard = true) {
   if (q.length < 2 || onlineQuery === q) return;
   clearTimeout(autoOnline);
   onlineQuery = q;
+  const seq = ++onlineSeq;
   // Close the keyboard so the results are visible right away
   if (closeKeyboard) $("#search").blur();
   const box = $("#online");
@@ -544,7 +549,8 @@ async function searchOnline(closeKeyboard = true) {
     } catch (e) {
       if (attempt === 0) await new Promise(res => setTimeout(res, 1200));
     }
-    if (onlineQuery !== q) return; // the search text changed meanwhile
+    // A newer search started, or the text really changed meanwhile
+    if (seq !== onlineSeq || $("#search").value.trim() !== q) return;
   }
   if (!data) {
     onlineQuery = null;
@@ -1009,9 +1015,20 @@ document.addEventListener("keydown", e => {
 $("#meal-close").addEventListener("click", closeMeal);
 $("#meal-sheet").addEventListener("click", e => { if (e.target.id === "meal-sheet") closeMeal(); });
 $("#meal-add").addEventListener("click", () => openSheet(openMeal));
-$("#search").addEventListener("input", () => { onlineQuery = null; renderFoodList(); });
+// On iPhones, tapping "Suchen" first commits the keyboard's word suggestion, which fires an extra
+// "input" event with the same text. Only a real change of the text may reset the online search.
+let searchSubmitted = 0; // when the keyboard's search key was last pressed
+$("#search").addEventListener("input", () => {
+  const changed = $("#search").value.trim() !== onlineQuery;
+  if (changed) onlineQuery = null;
+  renderFoodList();
+  // The suggestion changed the word right as "Suchen" was pressed: search the corrected word
+  if (changed && Date.now() - searchSubmitted < 1500) searchOnline();
+});
+// Keep the keyboard open until the tap on "online suchen" has landed; closing it first moves the button
+$("#online").addEventListener("mousedown", e => { if (e.target.closest("[data-online-search]")) e.preventDefault(); });
 // The keyboard's search key (🔍 / "Suchen") submits the form; this works reliably on phones
-$("#search-form").addEventListener("submit", e => { e.preventDefault(); searchOnline(); });
+$("#search-form").addEventListener("submit", e => { e.preventDefault(); searchSubmitted = Date.now(); searchOnline(); });
 $("#amount").addEventListener("input", () => { pick.exact = null; updatePreview(); });
 $("#amount-unit").addEventListener("change", changeUnit);
 $("#amount-form").addEventListener("submit", submitAmount);
