@@ -801,6 +801,50 @@ async function nativeDetector() {
   }
 }
 
+// iPhones ask for camera permission again every time a home-screen web app turns the camera on.
+// So the camera is only paused after a scan and kept for a while: scanning several products in a row
+// needs a single "Allow". It is switched off for real after a few minutes, or when the app goes to the background.
+const CAMERA_KEEP_MS = 3 * 60 * 1000;
+let camStream = null;
+let camRelease = null;
+
+function cameraLive() {
+  return camStream && camStream.getVideoTracks().some(t => t.readyState === "live");
+}
+
+async function getCamera() {
+  clearTimeout(camRelease);
+  if (cameraLive()) {
+    camStream.getTracks().forEach(t => t.enabled = true);
+    return camStream;
+  }
+  camStream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  });
+  return camStream;
+}
+
+function parkCamera() {
+  if (!camStream) return;
+  camStream.getTracks().forEach(t => t.enabled = false);
+  clearTimeout(camRelease);
+  camRelease = setTimeout(releaseCamera, CAMERA_KEEP_MS);
+}
+
+function releaseCamera() {
+  clearTimeout(camRelease);
+  camStream?.getTracks().forEach(t => t.stop());
+  camStream = null;
+}
+
+document.addEventListener("visibilitychange", () => {
+  const scanOpen = !$("#sheet").hidden && !$('#sheet .tab[data-tab="scan"]').hidden;
+  if (!document.hidden) { if (scanOpen) startScan(); return; }
+  stopScan();
+  releaseCamera();
+});
+
 async function startScan() {
   if (scan) return;
   const status = $("#scan-status");
@@ -812,11 +856,8 @@ async function startScan() {
   $("#scan-start").hidden = true;
   status.textContent = "Kamera wird gestartet …";
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-    });
-    if (scan !== session) return stream.getTracks().forEach(t => t.stop()); // closed meanwhile
+    const stream = await getCamera();
+    if (scan !== session) return parkCamera(); // closed meanwhile
     session.stream = stream;
     // Continuous autofocus where supported, so a close-up barcode gets sharp quickly
     const track = stream.getVideoTracks()[0];
@@ -853,6 +894,7 @@ async function startScan() {
   } catch (err) {
     if (scan !== session) return;
     stopScan();
+    releaseCamera();
     status.textContent = "Kamera nicht verfügbar. Erlaube den Zugriff in den Einstellungen oder tipp den Barcode ein.";
   }
 }
@@ -867,7 +909,7 @@ function stopScan() {
   if (scan) {
     clearTimeout(scan.timer);
     try { scan.controls?.stop(); } catch (e) { /* already stopped */ }
-    scan.stream?.getTracks().forEach(t => t.stop());
+    if (scan.stream) parkCamera();
     scan = null;
     $("#scan-video").srcObject = null;
   }
