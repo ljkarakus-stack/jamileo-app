@@ -132,7 +132,7 @@ function updateRecipePreview() {
 function searchIngredients() {
   const words = fold($("#ing-search").value.trim()).split(/\s+/).filter(Boolean);
   if (!words.length) { $("#ing-results").innerHTML = ""; return; }
-  const list = allFoods().filter(f => words.every(w => fold(f.name).includes(w))).slice(0, 6);
+  const list = findFoods(words, 6);
   $("#ing-results").innerHTML = list.map(f => `<button type="button" class="food" data-ing-add="${esc(f.id)}">
       <span class="n">${esc(f.name)}</span><span class="k">${num(f.kcal)} kcal</span></button>`).join("")
     || `<p class="empty">Nicht gefunden. Leg es zuerst über + → Manuell oder die Online-Suche an.</p>`;

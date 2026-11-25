@@ -76,12 +76,51 @@ function totals(k) {
 function allFoods() {
   return [...state.custom, ...FOODS];
 }
+
+// ---------- Bundeslebensmittelschlüssel (BLS 4.0) ----------
+// 7,000+ foods from the national German nutrient database. The file is large, so it loads
+// shortly after start (or when the add sheet opens) and only shows up in searches.
+let blsFoods = [];
+const blsById = new Map();
+let blsLoading = null;
+
+function loadBLS() {
+  if (blsLoading) return blsLoading;
+  blsLoading = new Promise(res => {
+    const s = document.createElement("script");
+    s.src = "bls.js?v=34";
+    s.onload = () => {
+      blsFoods = (window.BLS_DATA || "").split("\n").map(line => {
+        const [code, name, kcal, p, kh, f, fib] = line.split("|");
+        return { id: "bls-" + code, name, cat: "BLS", src: "bls", kcal: +kcal, p: +p, kh: +kh, f: +f, fib: +fib };
+      });
+      delete window.BLS_DATA;
+      blsFoods.forEach(f => blsById.set(f.id, f));
+      res();
+      // Search results, favorites and recent foods may include BLS foods
+      if (!$("#sheet").hidden) renderFoodList();
+    };
+    s.onerror = () => { blsLoading = null; res(); };
+    document.head.appendChild(s);
+  });
+  return blsLoading;
+}
+
+// Our own foods first, then the BLS; best matches first, at most `limit`
+// Typos are only looked for when the exact search finds little: that check is the slow part.
+function findFoods(words, limit = 80) {
+  const all = [...allFoods(), ...blsFoods];
+  const rank = typos => all.map(f => ({ f, r: matchRank(f.name, words, typos) })).filter(x => x.r < 9);
+  let hits = rank(false);
+  if (hits.length < 10) hits = rank(true);
+  return hits.sort((a, b) => a.r - b.r).slice(0, limit).map(x => x.f);
+}
 function foodById(id) {
   const idea = id.startsWith("idee-") && ideaById(id.slice(5));
   if (idea) return ideaFood(idea);
   const recipe = id.startsWith("rez-") && (state.recipes || []).find(r => "rez-" + r.id === id);
   if (recipe) return recipeFood(recipe);
-  return allFoods().find(f => f.id === id);
+  return allFoods().find(f => f.id === id) || blsById.get(id);
 }
 // Nutrients for an amount: grams for per-100 g foods, count for portion foods
 function scale(food, amount) {
@@ -426,6 +465,7 @@ function defaultSlot() {
 }
 
 function openSheet(slot) {
+  loadBLS();
   pick = { slot: slot || defaultSlot() };
   $("#sheet").hidden = false;
   $("#sheet-title").textContent = "Hinzufügen";
@@ -469,14 +509,11 @@ function renderFoodList() {
   else if (activeCat === "Eigene") list = state.custom;
   else if (activeCat === "Alle") list = allFoods();
   else list = FOODS.filter(f => f.cat === activeCat);
-  if (words.length) {
-    list = allFoods().map(f => ({ f, r: matchRank(f.name, words) })).filter(x => x.r < 9)
-      .sort((a, b) => a.r - b.r).map(x => x.f);
-  }
+  if (words.length) list = findFoods(words);
 
   const row = f => `<button class="food" data-food="${esc(f.id)}">
       <span class="n">${isFav(f.id) ? "⭐ " : ""}${esc(f.name)}</span><span class="k">${num(f.kcal)} kcal</span>
-      <span class="d">${baseLabel(f)} · ${num(f.p, 1)} g Protein · ${num(f.kh, 1)} g KH · ${num(f.f, 1)} g Fett</span>
+      <span class="d">${baseLabel(f)} · ${num(f.p, 1)} g Protein · ${num(f.kh, 1)} g KH · ${num(f.f, 1)} g Fett${f.src === "bls" ? " · BLS" : ""}</span>
     </button>`;
   // Without a search, favorites and recent foods come first for fast logging
   let quick = "";
@@ -538,9 +575,15 @@ function editDistance(a, b, max) {
 }
 
 // How well a food name fits the search words: 0 best ... 3 typo; 9 = no match. Every word must fit.
-function matchRank(name, words) {
-  const folded = fold(name);
-  const tokens = folded.split(/[^a-z0-9]+/).filter(Boolean);
+const nameCache = new Map(); // food name -> [folded name, words], so 7,000+ names are not folded on every key press
+function matchRank(name, words, typos = true) {
+  let cached = nameCache.get(name);
+  if (!cached) {
+    const f = fold(name);
+    cached = [f, f.split(/[^a-z0-9]+/).filter(Boolean)];
+    nameCache.set(name, cached);
+  }
+  const [folded, tokens] = cached;
   let worst = 0;
   for (const [i, w] of words.entries()) {
     const stem = w.length > 4 ? w.replace(/(en|n|e|s)$/, "") : w;
@@ -549,7 +592,7 @@ function matchRank(name, words) {
     if (tokens.includes(w)) r = 0;
     else if (tokens.some(t => t.startsWith(w))) r = 1;
     else if (alts.some(a => folded.includes(a))) r = 2;
-    else if (w.length >= 4) {
+    else if (typos && w.length >= 4) {
       const max = w.length >= 8 ? 2 : 1;
       if (tokens.some(t => editDistance(w, t, max) <= max || (t.length > w.length && editDistance(w, t.slice(0, w.length), max) <= max))) r = 3;
     }

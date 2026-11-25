@@ -17,6 +17,9 @@ function backfillFibre() {
 }
 backfillFibre();
 
+// The large BLS food list loads once the app is up, so search, favorites and recent foods have it
+setTimeout(loadBLS, 1500);
+
 // Moving from the old address: the old page hands the saved data over as a code
 // (#umzug=<gzip, base64url>), either inside the link or copied to the clipboard.
 // On iPhones every home screen app has its own storage, so there the code is pasted by hand.
